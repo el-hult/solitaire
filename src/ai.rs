@@ -5,16 +5,15 @@ use super::game::Action;
 
 /// A simple AI player that can play solitaire
 /// 
-/// TODO define a trait for the AI player, so that one can have different implementations and compare them
-pub struct AiPlayer {
+pub struct SimpleAi {
     seen_state_action_combos: std::collections::HashSet<(SolitaireView, Action)>,
     // have we made passes through the deck?
     number_of_passes: u64,
 }
 
-impl AiPlayer {
+impl SimpleAi {
     pub fn new() -> Self {
-        AiPlayer {
+        SimpleAi {
             seen_state_action_combos: std::collections::HashSet::new(),
             number_of_passes: 0,
         }
@@ -152,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_ai_can_win() {
-        let mut ai = AiPlayer::new();
+        let mut ai = SimpleAi::new();
         let view = SolitaireView{
             talon_size: 0,
             waste_top: None,

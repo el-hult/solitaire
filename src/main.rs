@@ -4,13 +4,13 @@ mod view;
 
 /// The main function.
 fn main() -> Result<(), std::io::Error> {
-    let mut n_runs = 0;
-    let mut n_wins = 0;
     let n_games_to_play = 10;
+    let mut game_statistics = Vec::new();
 
     for k in 0..n_games_to_play {
         let mut gs = game::GameEngine::deal(k);
-        let mut ai = ai::AiPlayer::new();
+        let t_begin = std::time::Instant::now();
+        let mut ai = ai::SimpleAi::new();
         let mut n_actions_taken = 0;
         while gs.is_running() {
             let action = ai.calc_action(&gs.observe());
@@ -18,16 +18,11 @@ fn main() -> Result<(), std::io::Error> {
                 .unwrap_or_else(|_| panic!("The AI suggested {:?} an illegal move!", action));
             n_actions_taken += 1;
         }
-        if gs.is_won() {
-            println!("Game {} won in {} moves", k, n_actions_taken);
-        } else {
-            println!("Game {} lost in {} moves", k, n_actions_taken);
-        }
-        n_runs += 1;
-        if gs.is_won() {
-            n_wins += 1;
-        }
+        let t_end = std::time::Instant::now();
+        let stats = ("SimpleAi", k, gs.is_won(),n_actions_taken, t_end - t_begin);
+        game_statistics.push(stats);
+        println!("{:?}", stats);
     }
-    println!("Won {} out of {} games", n_wins, n_runs);
+    println!("{:#?}", game_statistics);
     Ok(())
 }
