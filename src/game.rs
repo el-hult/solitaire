@@ -1,12 +1,12 @@
-//! The game engine/logic. 
+//! The game engine/logic.
 //! It is mostly private, but creating a new game and sending actions to the game engine is public.
 
+use crate::view::{Addr, CardView, SolitaireView, Suit, Value};
 use rand::prelude::*;
 use thiserror::Error;
-use crate::view::{SolitaireView, CardView, Suit, Value, Addr};
 
 /// The different actions that can be taken in the game
-/// 
+///
 /// Implemented as a kind of command pattern, decoupling from the actual methods on the game engine.
 /// Designed to be used with the [`GameEngine::act`] method.
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
@@ -39,7 +39,7 @@ enum State {
 }
 
 /// The game state. It has methods to observe the state (create a solitaire view) and to act.
-/// 
+///
 /// Invariant: the game is always valid, meaning
 ///  - all 52 cards are in there
 ///  - the talon have cards face down
@@ -50,16 +50,18 @@ pub struct GameEngine {
     /// the last element = the face up card. pop from last element when picking one.
     talon: Vec<Card>,
     /// the last element = the visible card
-    /// 
+    ///
     /// Waste is also sometimes called the "hand" in solitaire, since that is the pile we can play from
     waste: Vec<Card>,
     /// The columns of cards on the table The major part of the tableaux
-    /// 
+    ///
     /// last element = the available card.
     columns: [Vec<Card>; 7],
     /// The foundations are where we build the ace piles
     foundations: [Vec<Card>; 4],
     state: State,
+    /// The current score
+    current_score: u32,
 }
 
 /// Errors that can occur when trying to make a move
@@ -78,10 +80,37 @@ pub enum MoveError {
 }
 
 impl GameEngine {
+    pub fn score(&self) -> u32 {
+        self.current_score
+    }
+
+    /// Update the score, according to the rules at <https://australiancardgames.com.au/solitaire/>
+    fn score_action(&mut self, action: &Action) {
+        match action {
+            Action::Take => {}
+            Action::Move(from, to, _) => {
+                if from.is_waste() && to.is_foundation() {
+                    self.current_score += 10;
+                } else if from.is_waste() && to.is_depot() {
+                    self.current_score += 5;
+                } else if from.is_depot() && to.is_foundation() {
+                    self.current_score += 10;
+                } else if from.is_foundation() && to.is_depot() {
+                    self.current_score=self.current_score.saturating_sub(15);
+                }
+            }
+            Action::Reveal(_) => {
+                self.current_score += 5;
+            }
+            Action::Turnover => {self.current_score=self.current_score.saturating_sub(100)},
+            Action::Quit => {}
+        }
+    }
+
     pub fn observe(&self) -> SolitaireView {
         SolitaireView {
             talon_size: self.talon.len(),
-            waste_top: self.waste.last().map(|c| (c.suit,c.value)),
+            waste_top: self.waste.last().map(|c| (c.suit, c.value)),
             foundation_tops: [
                 self.foundations[0].last().map(|c| c.to_view()),
                 self.foundations[1].last().map(|c| c.to_view()),
@@ -112,7 +141,6 @@ impl GameEngine {
 
     /// Deal a new game
     pub fn deal(seed: u64) -> Self {
-
         /// Inner function that is just a helper to build the depots
         fn build_depot(iter: &mut dyn Iterator<Item = Card>, n: usize) -> Vec<Card> {
             let mut v = vec![];
@@ -142,6 +170,7 @@ impl GameEngine {
             columns: depots,
             foundations,
             state: State::Running,
+            current_score: 0,
         }
     }
 
@@ -249,11 +278,15 @@ impl GameEngine {
             let card = self.pile_mut(from).pop().unwrap();
             self.pile_mut(to).push(card);
             return Ok(());
+        } else if card_to_move.numeric_value() == 1 {
+            return Err(MoveError::WithDescription(
+                "Cannot place ace on non-empty slot".into(),
+            ));
         }
 
         // Place card on top of same suit and one higher, possibly ending the game
         if let Some(c) = self.pile(to).last() {
-            if c.suit == card_to_move.suit && c.numeric_value() == card_to_move.numeric_value() - 1
+            if c.suit == card_to_move.suit && card_to_move.numeric_value() == c.numeric_value() + 1
             {
                 let card = self.pile_mut(from).pop().unwrap();
                 self.pile_mut(to).push(card);
@@ -261,9 +294,16 @@ impl GameEngine {
                     self.state = State::Win;
                 }
                 return Ok(());
+            } else {
+                return Err(MoveError::WithDescription(
+                    "Cannot place card on top of non-matching suit or non-one-lower value".into(),
+                ));
             }
+        } else {
+            return Err(MoveError::WithDescription(
+                "Cannot place non-ace on empty slot".into(),
+            ));
         }
-        Err(MoveError::Unspecified)
     }
 
     fn move_to_depot(&mut self, from: &Addr, to: &Addr, n: usize) -> Result<(), MoveError> {
@@ -325,13 +365,17 @@ impl GameEngine {
     }
 
     pub fn act(&mut self, action: &Action) -> Result<(), MoveError> {
-        match action {
+        let moveres = match action {
             Action::Take => self.take(),
             Action::Move(a1, a2, k) => self.move_cards(a1, a2, *k),
             Action::Reveal(a) => self.reveal(a),
             Action::Quit => self.quit(),
             Action::Turnover => self.turnover(),
+        };
+        if moveres.is_ok() {
+            self.score_action(action);
         }
+        moveres
     }
 
     fn quit(&mut self) -> Result<(), MoveError> {
@@ -431,10 +475,90 @@ fn shuffled_deck(seed: u64) -> Vec<Card> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn can_only_move_one_from_waste() {
-        let mut gs = super::GameEngine::deal(0);
-        let action = super::Action::Move(super::Addr::Waste, super::Addr::Depot3, 2);
+        let mut gs = GameEngine::deal(0);
+        let action = Action::Move(Addr::Waste, Addr::Depot3, 2);
         assert!(gs.act(&action).is_err());
+    }
+
+    /// When taking some simplified game state and
+    /// 1) move card from waste to foundation
+    /// 2) reveal a card in the tableaux
+    /// 3) move card from tableaux to foundation
+    /// make sure the score increase by 10 + 5 + 10 = 25
+    #[test]
+    fn score_when_moving_cards() {
+        let mut gs = GameEngine {
+            talon: vec![],
+            waste: vec![Card {
+                suit: Suit::Hearts,
+                value: 1.into(),
+                faceup: true,
+            }],
+            columns: [
+                vec![Card {
+                    suit: Suit::Spades,
+                    value: 2.into(),
+                    faceup: false,
+                }],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+            ],
+            foundations: [vec![], vec![
+                Card {
+                    suit: Suit::Spades,
+                    value: 1.into(),
+                    faceup: true,
+                }
+            ], vec![], vec![]],
+            state: State::Running,
+            current_score: 0,
+        };
+        gs.act(&Action::Move(Addr::Waste, Addr::Foundation1, 1))
+            .map_err(|e| eprintln!("{}", e))
+            .unwrap();
+        gs.act(&Action::Reveal(Addr::Depot1))
+            .map_err(|e| eprintln!("{}", e))
+            .unwrap();
+        gs.act(&Action::Move(Addr::Depot1, Addr::Foundation2, 1))
+            .map_err(|e| eprintln!("{}", e))
+            .unwrap();
+        assert_eq!(gs.score(), 25);
+    }
+
+    /// Test there wont be underflow in scoring when turning the deck over
+    #[test]
+    fn score_when_turning_over() {
+        let mut gs = GameEngine {
+            talon: vec![],
+            waste: vec![Card {
+                suit: Suit::Spades,
+                value: 2.into(),
+                faceup: true,
+            }],
+            columns: [
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+            ],
+            foundations: [vec![], vec![], vec![], vec![]],
+            state: State::Running,
+            current_score: 0,
+        };
+        gs.act(&Action::Turnover)
+            .map_err(|e| eprintln!("{}", e))
+            .expect("This should be fin. No underflows. No funny business.");
+        assert_eq!(gs.score(), 0);
     }
 }

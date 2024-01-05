@@ -19,7 +19,7 @@ fn main() -> Result<(), std::io::Error> {
             n_actions_taken += 1;
         }
         let t_end = std::time::Instant::now();
-        let stats = ("SimpleAi", k, gs.is_won(),n_actions_taken, t_end - t_begin);
+        let stats = ("SimpleAi", k, gs.score(), gs.is_won(),n_actions_taken, t_end - t_begin);
         game_statistics.push(stats);
         println!("{:?}", stats);
     }
