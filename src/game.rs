@@ -293,16 +293,16 @@ impl GameEngine {
                 if self.foundations.iter().all(|f| f.len() == 13) {
                     self.state = State::Win;
                 }
-                return Ok(());
+                Ok(())
             } else {
-                return Err(MoveError::WithDescription(
+                Err(MoveError::WithDescription(
                     "Cannot place card on top of non-matching suit or non-one-lower value".into(),
-                ));
+                ))
             }
         } else {
-            return Err(MoveError::WithDescription(
+            Err(MoveError::WithDescription(
                 "Cannot place non-ace on empty slot".into(),
-            ));
+            ))
         }
     }
 
