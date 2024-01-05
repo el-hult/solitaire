@@ -1,5 +1,7 @@
 //! An AI player that plays greedy
 //! 
+//! It will deem the Quit action to have -200 score, otherwise it will never turn the waste over
+//! 
 use crate::view::{SolitaireView, CardView, DEPOTS_AND_WASTE, Addr, Value};
 use super::game::Action;
 
@@ -165,8 +167,8 @@ impl GreedyAi {
         }
 
         // Give up
-        actions.push((0,Action::Quit).into());
-        actions.into_sorted_vec().into_iter().map(|a| a.action).collect()
+        actions.push((-200,Action::Quit).into());
+        actions.into_sorted_vec().into_iter().rev().map(|a| a.action).collect()
     }
 }
 
