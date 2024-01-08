@@ -51,7 +51,7 @@ impl Ai for GreedyAi {
 /// The observable state of the game, as a struct in itself
 /// This is what a human could see when playing the game
 /// so it is the same information that we would pass to an AI
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SolitaireObserver {
     pub talon_size: usize,
     pub waste: Vec<(Suit, Value)>,
@@ -171,19 +171,6 @@ impl SolitaireObserver {
                 }
             }
         }
-    }
-}
-impl Hash for SolitaireObserver {
-    /// A hash function that does not care about the order of the cards in the depots or foundations
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.talon_size.hash(state);
-        self.waste.hash(state);
-        let mut sorted_f = self.foundation_tops.to_vec();
-        sorted_f.sort();
-        sorted_f.hash(state);
-        let mut sorted_d = self.depots.to_vec();
-        sorted_d.sort();
-        sorted_d.hash(state);
     }
 }
 
