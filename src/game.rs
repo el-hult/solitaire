@@ -1,7 +1,8 @@
 //! The game engine/logic.
 //! It is mostly private, but creating a new game and sending actions to the game engine is public.
 
-use crate::view::{Addr, CardView, SolitaireView, Suit, Value};
+use crate::{view::{Addr, Suit, Value}, ai::{CardView, SolitaireObserver}};
+use itertools::Itertools;
 use rand::prelude::*;
 use thiserror::Error;
 
@@ -107,15 +108,16 @@ impl GameEngine {
         }
     }
 
-    pub fn observe(&self) -> SolitaireView {
-        SolitaireView {
+    pub fn observe(&self) -> SolitaireObserver {
+        SolitaireObserver {
             talon_size: self.talon.len(),
-            waste_top: self.waste.last().map(|c| (c.suit, c.value)),
+            waste: self.waste.iter().map(|c| (c.suit, c.value)).collect_vec()
+            ,
             foundation_tops: [
-                self.foundations[0].last().map(|c| c.to_view()),
-                self.foundations[1].last().map(|c| c.to_view()),
-                self.foundations[2].last().map(|c| c.to_view()),
-                self.foundations[3].last().map(|c| c.to_view()),
+                self.foundations[0].last().map(|c| c.clone().into()),
+                self.foundations[1].last().map(|c| c.clone().into()),
+                self.foundations[2].last().map(|c| c.clone().into()),
+                self.foundations[3].last().map(|c| c.clone().into()),
             ],
             depots: [
                 self.columns[0].iter().map(|c| c.to_view()).collect(),
@@ -175,11 +177,11 @@ impl GameEngine {
     }
 
     /// Take the topmost card from the talon and place it on the waste pile
-    fn take(&mut self) -> Result<(), MoveError> {
+    fn take(&mut self) -> Result<(Suit,Value), MoveError> {
         if let Some(c) = self.talon.pop() {
-            self.waste.push(c);
+            self.waste.push(c.clone());
             self.waste.last_mut().unwrap().reveal();
-            Ok(())
+            Ok((c.suit, c.value))
         } else {
             Err(MoveError::Unspecified)
         }
@@ -205,7 +207,7 @@ impl GameEngine {
     }
 
     /// Reveal the topmost card in a depot, if there is one
-    fn reveal(&mut self, addr: &Addr) -> Result<(), MoveError> {
+    fn reveal(&mut self, addr: &Addr) -> Result<(Suit,Value), MoveError> {
         let depot = match addr {
             Addr::Waste
             | Addr::Foundation1
@@ -227,7 +229,7 @@ impl GameEngine {
                 Err(MoveError::Unspecified)
             } else {
                 c.reveal();
-                Ok(())
+                Ok((c.suit, c.value))
             }
         } else {
             Err(MoveError::Unspecified)
@@ -364,13 +366,13 @@ impl GameEngine {
         }
     }
 
-    pub fn act(&mut self, action: &Action) -> Result<(), MoveError> {
+    pub fn act(&mut self, action: &Action) -> Result<Option<(Suit,Value)>, MoveError> {
         let moveres = match action {
-            Action::Take => self.take(),
-            Action::Move(a1, a2, k) => self.move_cards(a1, a2, *k),
-            Action::Reveal(a) => self.reveal(a),
-            Action::Quit => self.quit(),
-            Action::Turnover => self.turnover(),
+            Action::Take => self.take().map(Some),
+            Action::Move(a1, a2, k) => self.move_cards(a1, a2, *k).map(|_| Option::None),
+            Action::Reveal(a) => self.reveal(a).map(Some),
+            Action::Quit => self.quit().map(|_|Option::None),
+            Action::Turnover => self.turnover().map(|_|Option::None),
         };
         if moveres.is_ok() {
             self.score_action(action);
@@ -453,6 +455,11 @@ impl Card {
         } else {
             CardView::FaceDown
         }
+    }
+}
+impl Into<(Suit, Value)> for Card {
+    fn into(self) -> (Suit, Value) {
+        (self.suit, self.value)
     }
 }
 

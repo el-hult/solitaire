@@ -14,14 +14,15 @@ fn main() -> Result<(), std::io::Error> {
             let mut gs = game::GameEngine::deal(k);
             let t_begin = std::time::Instant::now();
             let mut ai: Box<dyn ai::Ai> = match ai_type {
-                ai::AiType::Simple => Box::from(ai::SimpleAi::new()),
-                ai::AiType::Greedy => Box::from(ai::GreedyAi::new()),
+                ai::AiType::Simple => Box::from(ai::SimpleAi::new(gs.observe())),
+                ai::AiType::Greedy => Box::from(ai::GreedyAi::new(gs.observe())),
             };
             let mut n_actions_taken = 0;
             while gs.is_running() {
-                let action = ai.make_move(&gs.observe());
-                gs.act(&action)
+                let action = ai.make_move();
+                let res = gs.act(&action)
                     .unwrap_or_else(|_| panic!("The AI suggested {:?} an illegal move!", action));
+                ai.update(action, res);
                 n_actions_taken += 1;
             }
             let t_end = std::time::Instant::now();

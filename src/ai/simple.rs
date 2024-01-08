@@ -1,37 +1,39 @@
 //! A simple AI player that can play solitaire
 //! 
-use crate::view::{SolitaireView, CardView, DEPOTS_AND_WASTE, Addr, Value};
-use super::game::Action;
+use crate::view::{DEPOTS_AND_WASTE, Addr, Value};
+use super::{game::Action, SolitaireObserver, CardView};
 
 /// A simple AI player that can play solitaire
 /// 
 pub struct SimpleAi {
-    seen_state_action_combos: std::collections::HashSet<(SolitaireView, Action)>,
+    seen_state_action_combos: std::collections::HashSet<(SolitaireObserver, Action)>,
     // have we made passes through the deck?
     number_of_passes: u64,
+    view: SolitaireObserver,
 }
 
 impl SimpleAi {
-    pub fn new() -> Self {
+    pub fn new(view: SolitaireObserver) -> Self {
         SimpleAi {
             seen_state_action_combos: std::collections::HashSet::new(),
             number_of_passes: 0,
+            view
         }
     }
 
     /// Provide a single move,
-    pub fn calc_action(&mut self, view: &SolitaireView) -> Action {
-        let actions = self.suggest_actions(view);
+    pub fn calc_action(&mut self) -> Action {
+        let actions = self.suggest_actions();
         // dbg!(&actions);
         for action in actions {
             if self
                 .seen_state_action_combos
-                .contains(&(view.clone(), action.clone()))
+                .contains(&(self.view.clone(), action.clone()))
             {
                 continue;
             }
             self.seen_state_action_combos
-                .insert((view.clone(), action.clone()));
+                .insert((self.view.clone(), action.clone()));
             if action == Action::Turnover {
                 self.number_of_passes += 1;
             } 
@@ -43,18 +45,18 @@ impl SimpleAi {
     /// Produce all valid moves that we potentially would like to make in a prioritized order
     /// 
     /// Some of the simplest advice from <https://solitaired.com/ultimate-solitaire-strategy-guide> are implemented
-    fn suggest_actions(&mut self, view: &SolitaireView) -> Vec<Action> {
+    fn suggest_actions(&mut self) -> Vec<Action> {
         let mut actions = vec![];
-        if view.is_won() {
+        if self.view.is_won() {
             actions.push(Action::Quit);
             return actions;
         }
 
         // Build on foundations
         for from_addr in DEPOTS_AND_WASTE.iter() {
-            if let Some(CardView::FaceUp(suit,value)) = view.card_at(from_addr, 1) {
+            if let Some(CardView::FaceUp(suit,value)) = self.view.card_at(from_addr, 1) {
                 for to_addr in Addr::FOUNDATIONS {
-                    match view.card_at(&to_addr, 1) {
+                    match self.view.card_at(&to_addr, 1) {
                         None => {
                             if value.is_ace() {
                                 actions.push(Action::Move(*from_addr, to_addr, 1));
@@ -76,7 +78,7 @@ impl SimpleAi {
         }
 
         // Try to reveal a card
-        for (idx,a) in view.depots.iter().enumerate() {
+        for (idx,a) in self.view.depots.iter().enumerate() {
             if let Some(CardView::FaceDown) = a.last() {
                 actions.push(Action::Reveal(Addr::DEPOTS[idx]));
             }
@@ -84,18 +86,18 @@ impl SimpleAi {
 
         // Try to increase the sequences in the tableaux
         for from in DEPOTS_AND_WASTE {
-            let max_cards_to_move = view.n_takeable_cards(&from);
+            let max_cards_to_move = self.view.n_takeable_cards(&from);
             if max_cards_to_move == 0 {
                 continue;
             }
             for to in Addr::DEPOTS.into_iter().filter(|to| to != &from) {
-                if from.is_waste() && matches!(view.waste_top,Some((_, Value::TWO))) {
+                if from.is_waste() && matches!(self.view.waste.last(),Some((_, Value::TWO))) {
                     // Don't move 2's from the hand to the tableaux - they can only ever block other cards
                     continue;
                 }
                 if from.is_waste() && to.is_depot() {
                     // Dont move low values from the hand to the tableaux too early
-                    if let Some((_,value)) = view.waste_top
+                    if let Some((_,value)) = self.view.waste.last()
                     {
                         if value.numeric_value() < 5 && self.number_of_passes == 0 {
                             continue;
@@ -104,9 +106,9 @@ impl SimpleAi {
                 }
                 for n_moves in 1..=max_cards_to_move {
                     if let Some(CardView::FaceUp(suit, value)) =
-                        view.card_at(&from, n_moves)
+                        self.view.card_at(&from, n_moves)
                     {
-                        match view.card_at(&to, 1) {
+                        match self.view.card_at(&to, 1) {
                             None => {
                                 if value == Value::KING {
                                     actions.push(Action::Move(from, to, n_moves));
@@ -127,18 +129,22 @@ impl SimpleAi {
         }
 
         // Take from the talon
-        if view.talon_size != 0 {
+        if self.view.talon_size != 0 {
             actions.push(Action::Take);
         }
 
         // Turn over the talon
-        if view.waste_top.is_some() && view.talon_size == 0 {
+        if self.view.waste.last().is_some() && self.view.talon_size == 0 {
             actions.push(Action::Turnover);
         }
 
         // Give up
         actions.push(Action::Quit);
         actions
+    }
+
+    pub fn update_view(&mut self, action: Action, res: Option<(crate::view::Suit, Value)>) {
+        self.view.update(action, res)
     }
 }
 
@@ -151,10 +157,9 @@ mod tests {
 
     #[test]
     fn test_ai_can_win() {
-        let mut ai = SimpleAi::new();
-        let view = SolitaireView{
+        let view = SolitaireObserver{
             talon_size: 0,
-            waste_top: None,
+            waste: vec![],
             foundation_tops: [None; 4],
             depots: [
                 vec![CardView::FaceUp(Suit::Hearts, Value::KING)],
@@ -162,7 +167,8 @@ mod tests {
                 vec![], vec![], vec![], vec![], vec![]
             ],
         };
-        let actions = ai.suggest_actions(&view);
+        let mut ai = SimpleAi::new(view);
+        let actions = ai.suggest_actions();
         assert!(actions.contains(&Action::Move(Addr::Depot2, Addr::Depot1, 1)), "Should be able to move queen of clubs to king of hearts");
     }
 }
