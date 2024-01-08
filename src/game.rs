@@ -449,14 +449,14 @@ impl Card {
         self.value.numeric_value()
     }
 }
-impl Into<(Suit, Value)> for Card {
-    fn into(self) -> (Suit, Value) {
-        (self.suit, self.value)
+impl From<Card> for (Suit, Value) {
+    fn from(val: Card) -> Self {
+        (val.suit, val.value)
     }
 }
-impl Into<CardView> for Card {
-    fn into(self) -> CardView {
-        match self {
+impl From<Card> for CardView {
+    fn from(val: Card) -> Self {
+        match val {
             Card {
                 faceup: false,
                 ..

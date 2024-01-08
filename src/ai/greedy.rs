@@ -27,7 +27,7 @@ impl From<(i64, Action)> for PrioritizedAction {
 
 impl PartialOrd for PrioritizedAction {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.priority.partial_cmp(&other.priority)
+        Some(self.cmp(other))
     }
 }
 
