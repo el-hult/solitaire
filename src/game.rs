@@ -1,7 +1,7 @@
 //! The game engine/logic.
 //! It is mostly private, but creating a new game and sending actions to the game engine is public.
 
-use crate::{view::{Addr, Suit, Value}, ai::{CardView, SolitaireObserver}};
+use crate::{view::{Addr,CardView, Suit, Value}, ai::SolitaireObserver};
 use itertools::Itertools;
 use rand::prelude::*;
 use thiserror::Error;
@@ -120,13 +120,13 @@ impl GameEngine {
                 self.foundations[3].last().map(|c| c.clone().into()),
             ],
             depots: [
-                self.columns[0].iter().map(|c| c.to_view()).collect(),
-                self.columns[1].iter().map(|c| c.to_view()).collect(),
-                self.columns[2].iter().map(|c| c.to_view()).collect(),
-                self.columns[3].iter().map(|c| c.to_view()).collect(),
-                self.columns[4].iter().map(|c| c.to_view()).collect(),
-                self.columns[5].iter().map(|c| c.to_view()).collect(),
-                self.columns[6].iter().map(|c| c.to_view()).collect(),
+                self.columns[0].iter().map(|c| c.clone().into()).collect(),
+                self.columns[1].iter().map(|c| c.clone().into()).collect(),
+                self.columns[2].iter().map(|c| c.clone().into()).collect(),
+                self.columns[3].iter().map(|c| c.clone().into()).collect(),
+                self.columns[4].iter().map(|c| c.clone().into()).collect(),
+                self.columns[5].iter().map(|c| c.clone().into()).collect(),
+                self.columns[6].iter().map(|c| c.clone().into()).collect(),
             ],
         }
     }
@@ -448,18 +448,25 @@ impl Card {
     fn numeric_value(&self) -> u8 {
         self.value.numeric_value()
     }
-
-    fn to_view(&self) -> CardView {
-        if self.faceup {
-            CardView::FaceUp(self.suit, self.value)
-        } else {
-            CardView::FaceDown
-        }
-    }
 }
 impl Into<(Suit, Value)> for Card {
     fn into(self) -> (Suit, Value) {
         (self.suit, self.value)
+    }
+}
+impl Into<CardView> for Card {
+    fn into(self) -> CardView {
+        match self {
+            Card {
+                faceup: false,
+                ..
+            } => CardView::FaceDown,
+            Card {
+                suit,
+                value,
+                faceup: true,
+            } => CardView::FaceUp(suit, value),
+        }
     }
 }
 

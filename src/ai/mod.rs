@@ -7,7 +7,7 @@ pub mod simple;
 
 use crate::{
     game::{self, Action},
-    view::{self, Addr, Suit, Value},
+    view::{self, Addr, Suit, Value, CardView},
 };
 pub use greedy::GreedyAi;
 pub use simple::SimpleAi;
@@ -45,18 +45,6 @@ impl Ai for GreedyAi {
     }
     fn update(&mut self, action: game::Action, res: Option<(view::Suit, view::Value)>) {
         self.update_view(action, res);
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Ord, PartialOrd)]
-pub enum CardView {
-    FaceUp(Suit, Value),
-    FaceDown,
-}
-
-impl From<(Suit, Value)> for CardView {
-    fn from((s, v): (Suit, Value)) -> Self {
-        CardView::FaceUp(s, v)
     }
 }
 

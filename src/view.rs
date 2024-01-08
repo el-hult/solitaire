@@ -179,3 +179,15 @@ impl std::convert::From<u8> for Value {
         Value(v)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Ord, PartialOrd)]
+pub enum CardView {
+    FaceUp(Suit, Value),
+    FaceDown,
+}
+
+impl From<(Suit, Value)> for CardView {
+    fn from((s, v): (Suit, Value)) -> Self {
+        CardView::FaceUp(s, v)
+    }
+}
