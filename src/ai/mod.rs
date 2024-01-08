@@ -13,39 +13,10 @@ pub use greedy::GreedyAi;
 pub use simple::SimpleAi;
 use std::hash::Hash;
 
-pub enum AiType {
-    Simple,
-    Greedy,
-}
-
 pub trait Ai {
     fn make_move(&mut self) -> game::Action;
     fn name(&self) -> &'static str;
     fn update(&mut self, action: game::Action, res: Option<(view::Suit, view::Value)>);
-}
-
-impl Ai for SimpleAi {
-    fn make_move(&mut self) -> game::Action {
-        self.calc_action()
-    }
-    fn name(&self) -> &'static str {
-        "SimpleAi"
-    }
-    fn update(&mut self, action: game::Action, res: Option<(view::Suit, view::Value)>) {
-        self.update_view(action, res);
-    }
-}
-
-impl Ai for GreedyAi {
-    fn make_move(&mut self) -> game::Action {
-        self.calc_action()
-    }
-    fn name(&self) -> &'static str {
-        "GreedyAi"
-    }
-    fn update(&mut self, action: game::Action, res: Option<(view::Suit, view::Value)>) {
-        self.update_view(action, res);
-    }
 }
 
 /// The observable state of the game, as a struct in itself

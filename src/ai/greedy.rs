@@ -2,7 +2,7 @@
 //! 
 //! It will deem the Quit action to have -200 score, otherwise it will never turn the waste over
 //! 
-use crate::view::{DEPOTS_AND_WASTE, Addr, Value};
+use crate::view::{DEPOTS_AND_WASTE, Addr, Value, Suit};
 use super::{game::Action, SolitaireObserver, CardView};
 
 /// An AI player that plays greedy
@@ -200,5 +200,17 @@ mod tests {
         let mut ai = GreedyAi::new(view);
         let actions = ai.suggest_actions();
         assert!(actions.contains(&Action::Move(Addr::Depot2, Addr::Depot1, 1)), "Should be able to move queen of clubs to king of hearts");
+    }
+}
+
+impl super::Ai for GreedyAi {
+    fn make_move(&mut self) -> Action {
+        self.calc_action()
+    }
+    fn name(&self) -> &'static str {
+        "GreedyAi"
+    }
+    fn update(&mut self, action: Action, res: Option<(Suit, Value)>) {
+        self.update_view(action, res);
     }
 }

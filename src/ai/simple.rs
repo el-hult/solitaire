@@ -1,6 +1,6 @@
 //! A simple AI player that can play solitaire
 //! 
-use crate::view::{DEPOTS_AND_WASTE, Addr, Value};
+use crate::view::{DEPOTS_AND_WASTE, Addr, Value, Suit};
 use super::{game::Action, SolitaireObserver, CardView};
 
 /// A simple AI player that can play solitaire
@@ -145,6 +145,18 @@ impl SimpleAi {
 
     pub fn update_view(&mut self, action: Action, res: Option<(crate::view::Suit, Value)>) {
         self.view.update(action, res)
+    }
+}
+
+impl super::Ai for SimpleAi {
+    fn make_move(&mut self) -> Action {
+        self.calc_action()
+    }
+    fn name(&self) -> &'static str {
+        "SimpleAi"
+    }
+    fn update(&mut self, action: Action, res: Option<(Suit, Value)>) {
+        self.update_view(action, res);
     }
 }
 
