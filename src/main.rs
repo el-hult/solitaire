@@ -10,13 +10,13 @@ fn main() -> Result<(), std::io::Error> {
     let mut game_statistics = Vec::new();
 
     for k in 0..n_games_to_play {
-        let mk_simple: fn(ai::SolitaireObserver) -> Box<dyn ai::Ai> = |view| Box::from(ai::SimpleAi::new(view));
-        let mk_greedy: fn(ai::SolitaireObserver) -> Box<dyn ai::Ai> = |view| Box::from(ai::GreedyAi::new(view)); 
-        let ai_makers  = [mk_simple, mk_greedy];
-        for mk_ai in ai_makers {
+        let make_greedy: fn(ai::SolitaireObserver) -> Box<dyn ai::Ai> = |obs| Box::from(ai::GreedyAi::new(obs)); 
+        let make_simple: fn(ai::SolitaireObserver) -> Box<dyn ai::Ai> = |obs| Box::from(ai::SimpleAi::new(obs));
+        let ai_makers  = [make_simple, make_greedy];
+        for make_ai in ai_makers {
             let mut gs = game::GameEngine::deal(k);
             let t_begin = std::time::Instant::now();
-            let mut ai: Box<dyn ai::Ai> = mk_ai(gs.observe());
+            let mut ai: Box<dyn ai::Ai> = make_ai(gs.observe());
             let mut n_actions_taken = 0;
             while gs.is_running() {
                 let action = ai.make_move();
