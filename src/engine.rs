@@ -1,35 +1,10 @@
 //! The game engine/logic.
 //! It is mostly private, but creating a new game and sending actions to the game engine is public.
 
-use crate::{core::{Addr,CardView, Suit, Value}, ai::SolitaireObserver};
+use crate::{core::{Addr,CardView, Suit, Value, Action, MoveError}, ai::SolitaireObserver};
 use itertools::Itertools;
 use rand::prelude::*;
-use thiserror::Error;
 
-/// The different actions that can be taken in the game
-///
-/// Implemented as a kind of command pattern, decoupling from the actual methods on the game engine.
-/// Designed to be used with the [`GameEngine::act`] method.
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub enum Action {
-    /// Take the first card of the talon and place it on the waste pile face up
-    Take,
-    /// Move from one pile to another. If moving between depots, several cards may be moved at once
-    Move(
-        /// Where do we move from?
-        Addr,
-        /// Where do we move to?
-        Addr,
-        /// How many cards?
-        usize,
-    ),
-    /// Turn the waste over to form a new talon
-    Turnover,
-    /// Reveal a face down cards in some pile
-    Reveal(Addr),
-    /// Stop playing the game
-    Quit,
-}
 
 /// A simple flag to know if the game is running, and if not, was it a win or a loss?
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
@@ -65,20 +40,7 @@ pub struct GameEngine {
     current_score: u32,
 }
 
-/// Errors that can occur when trying to make a move
-/// This is bit haphazard, and got extended as needed in my debuggning.
-#[derive(Error, Debug)]
-pub enum MoveError {
-    /// An error with some textual explanation
-    #[error("Got explanation {0}")]
-    WithDescription(String),
-    /// Tried to move a card from a position, but there is no movable cards at that place
-    #[error("Found no card to move")]
-    NoCardToMove,
-    /// The catch-all error type
-    #[error("Unspecified move error")]
-    Unspecified,
-}
+
 
 impl GameEngine {
     pub fn score(&self) -> u32 {

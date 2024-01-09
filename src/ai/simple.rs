@@ -1,6 +1,6 @@
 //! A simple AI player that can play solitaire
 //!
-use super::{game::Action, CardView, SolitaireObserver};
+use super::{Action, CardView, SolitaireObserver};
 use crate::core::{Addr, Value};
 
 /// A simple AI player that can play solitaire

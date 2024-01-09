@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 mod ai;
-mod game;
+mod engine;
 mod core;
 
 /// The main function.
@@ -14,7 +14,7 @@ fn main() -> Result<(), std::io::Error> {
         let make_simple: fn(ai::SolitaireObserver) -> Box<dyn ai::Ai> = |obs| Box::from(ai::SimpleAi::new(obs));
         let ai_makers  = [make_simple, make_greedy];
         for make_ai in ai_makers {
-            let mut gs = game::GameEngine::deal(k);
+            let mut gs = engine::GameEngine::deal(k);
             let t_begin = std::time::Instant::now();
             let mut ai: Box<dyn ai::Ai> = make_ai(gs.observe());
             let mut n_actions_taken = 0;

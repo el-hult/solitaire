@@ -1,5 +1,6 @@
 //! Core types for a game of solitaire
 //! 
+use thiserror::Error;
 
 
 /// The suits in a 52-cards deck are hearts, diamonds, clubs and spades
@@ -204,4 +205,44 @@ impl From<(Suit, Value)> for CardView {
     fn from((s, v): (Suit, Value)) -> Self {
         CardView::FaceUp(s, v)
     }
+}
+
+
+/// The different actions that can be taken in the game
+///
+/// Implemented as a kind of command pattern, decoupling from the actual methods on the game engine.
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+pub enum Action {
+    /// Take the first card of the talon and place it on the waste pile face up
+    Take,
+    /// Move from one pile to another. If moving between depots, several cards may be moved at once
+    Move(
+        /// Where do we move from?
+        Addr,
+        /// Where do we move to?
+        Addr,
+        /// How many cards?
+        usize,
+    ),
+    /// Turn the waste over to form a new talon
+    Turnover,
+    /// Reveal a face down cards in some pile
+    Reveal(Addr),
+    /// Stop playing the game
+    Quit,
+}
+
+/// Errors that can occur when trying to make a move
+/// This is bit haphazard, and got extended as needed in my debuggning.
+#[derive(Error, Debug)]
+pub enum MoveError {
+    /// An error with some textual explanation
+    #[error("Got explanation {0}")]
+    WithDescription(String),
+    /// Tried to move a card from a position, but there is no movable cards at that place
+    #[error("Found no card to move")]
+    NoCardToMove,
+    /// The catch-all error type
+    #[error("Unspecified move error")]
+    Unspecified,
 }

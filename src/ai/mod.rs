@@ -5,10 +5,7 @@
 mod greedy;
 mod simple;
 
-use crate::{
-    core::{self, Addr, CardView, Suit, Value},
-    game::{self, Action},
-};
+use crate::core::{self, Action, Addr, CardView, Suit, Value};
 pub use greedy::GreedyAi;
 pub use simple::SimpleAi;
 use std::hash::Hash;
@@ -17,7 +14,7 @@ pub trait Ai {
     /// Ask the AI to suggest an action
     ///
     /// The action must be valid for the current game state
-    fn make_move(&mut self) -> game::Action;
+    fn make_move(&mut self) -> Action;
 
     /// The name of the AI.
     /// Used for reporting and statistics.
@@ -25,7 +22,7 @@ pub trait Ai {
 
     /// Update the AI with the result of an action
     /// If the action reveals a card, the suit and value of the card is given, otherwise None
-    fn update(&mut self, action: game::Action, res: Option<(core::Suit, core::Value)>);
+    fn update(&mut self, action: Action, res: Option<(core::Suit, core::Value)>);
 }
 
 /// A helper struct for the AI

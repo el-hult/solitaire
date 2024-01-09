@@ -2,7 +2,7 @@
 //!
 //! It will deem the Quit action to have -200 score, otherwise it will never turn the waste over
 //!
-use super::{game::Action, CardView, SolitaireObserver};
+use super::{Action, CardView, SolitaireObserver};
 use crate::core::{Addr, Suit, Value};
 
 /// An AI player that plays greedy
