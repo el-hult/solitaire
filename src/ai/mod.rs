@@ -2,27 +2,25 @@
 //!
 //! Defines the interface for the AI players and reexports them from their respective submodules.
 //!
-pub mod greedy;
-pub mod simple;
+mod greedy;
+mod simple;
 
 use crate::{
+    core::{self, Addr, CardView, Suit, Value},
     game::{self, Action},
-    core::{self, Addr, Suit, Value, CardView},
 };
 pub use greedy::GreedyAi;
-
 pub use simple::SimpleAi;
 use std::hash::Hash;
 
 pub trait Ai {
     /// Ask the AI to suggest an action
-    /// 
-    /// The action should be valid for the current state of the game
+    ///
+    /// The action must be valid for the current game state
     fn make_move(&mut self) -> game::Action;
 
-    /// The name of the AI
-    /// 
-    /// Used for reportingand statistics
+    /// The name of the AI.
+    /// Used for reporting and statistics.
     fn name(&self) -> &'static str;
 
     /// Update the AI with the result of an action
@@ -36,7 +34,7 @@ pub trait Ai {
 pub struct SolitaireObserver {
     pub talon_size: usize,
     pub waste: Vec<(Suit, Value)>,
-    pub foundation_tops: [Option<(Suit,Value)>; 4],
+    pub foundation_tops: [Option<(Suit, Value)>; 4],
     pub depots: [Vec<CardView>; 7],
 }
 
@@ -103,29 +101,26 @@ impl SolitaireObserver {
                     let n_skip = self.depots[from.index()].len().saturating_sub(n);
                     let mut cards_to_move = self.depots[from.index()].split_off(n_skip);
                     self.depots[to.index()].append(&mut cards_to_move);
-                }
-                else if from.is_depot() && to.is_foundation() {
-                    assert!(n==1);
-                    if let Some(CardView::FaceUp(s,v )) = self.depots[from.index()].pop() {
-                        self.foundation_tops[to.index()] = Some((s,v));
-                    } else{
+                } else if from.is_depot() && to.is_foundation() {
+                    assert!(n == 1);
+                    if let Some(CardView::FaceUp(s, v)) = self.depots[from.index()].pop() {
+                        self.foundation_tops[to.index()] = Some((s, v));
+                    } else {
                         panic!("We should only move face up cards to the foundation")
                     }
-                }
-                else if from.is_foundation() && to.is_depot() {
+                } else if from.is_foundation() && to.is_depot() {
                     let card = self.foundation_tops[from.index()].unwrap();
-                    self.foundation_tops[from.index()].unwrap().1 = Value::try_from(card.1.numeric_value()-1).expect("We should never move an ace from foundation");
+                    self.foundation_tops[from.index()].unwrap().1 =
+                        Value::try_from(card.1.numeric_value() - 1)
+                            .expect("We should never move an ace from foundation");
                     self.depots[to.index()].push(card.into());
-                }
-                else if from.is_waste() && to.is_depot() && n == 1 {
+                } else if from.is_waste() && to.is_depot() && n == 1 {
                     let card = self.waste.pop().unwrap();
                     self.depots[to.index()].push(card.into());
-                }
-                else if from.is_waste() && to.is_foundation() && n == 1 {
+                } else if from.is_waste() && to.is_foundation() && n == 1 {
                     let card = self.waste.pop().unwrap();
                     self.foundation_tops[to.index()] = Some(card);
-                }
-                else {
+                } else {
                     dbg!(action, res);
                     panic!("Illegal move (?)");
                 }
