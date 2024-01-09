@@ -7,21 +7,31 @@ pub mod simple;
 
 use crate::{
     game::{self, Action},
-    view::{self, Addr, Suit, Value, CardView},
+    core::{self, Addr, Suit, Value, CardView},
 };
 pub use greedy::GreedyAi;
+
 pub use simple::SimpleAi;
 use std::hash::Hash;
 
 pub trait Ai {
+    /// Ask the AI to suggest an action
+    /// 
+    /// The action should be valid for the current state of the game
     fn make_move(&mut self) -> game::Action;
+
+    /// The name of the AI
+    /// 
+    /// Used for reportingand statistics
     fn name(&self) -> &'static str;
-    fn update(&mut self, action: game::Action, res: Option<(view::Suit, view::Value)>);
+
+    /// Update the AI with the result of an action
+    /// If the action reveals a card, the suit and value of the card is given, otherwise None
+    fn update(&mut self, action: game::Action, res: Option<(core::Suit, core::Value)>);
 }
 
-/// The observable state of the game, as a struct in itself
-/// This is what a human could see when playing the game
-/// so it is the same information that we would pass to an AI
+/// A helper struct for the AI
+/// It holds the known information about the game state
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SolitaireObserver {
     pub talon_size: usize,
@@ -104,7 +114,7 @@ impl SolitaireObserver {
                 }
                 else if from.is_foundation() && to.is_depot() {
                     let card = self.foundation_tops[from.index()].unwrap();
-                    self.foundation_tops[from.index()].unwrap().1 = Value::from(card.1.numeric_value()-1);
+                    self.foundation_tops[from.index()].unwrap().1 = Value::try_from(card.1.numeric_value()-1).expect("We should never move an ace from foundation");
                     self.depots[to.index()].push(card.into());
                 }
                 else if from.is_waste() && to.is_depot() && n == 1 {

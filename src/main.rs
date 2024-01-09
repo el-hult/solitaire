@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 mod ai;
 mod game;
-mod view;
+mod core;
 
 /// The main function.
 fn main() -> Result<(), std::io::Error> {

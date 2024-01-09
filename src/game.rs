@@ -1,7 +1,7 @@
 //! The game engine/logic.
 //! It is mostly private, but creating a new game and sending actions to the game engine is public.
 
-use crate::{view::{Addr,CardView, Suit, Value}, ai::SolitaireObserver};
+use crate::{core::{Addr,CardView, Suit, Value}, ai::SolitaireObserver};
 use itertools::Itertools;
 use rand::prelude::*;
 use thiserror::Error;
@@ -477,7 +477,7 @@ fn shuffled_deck(seed: u64) -> Vec<Card> {
         for v in 1..=13 {
             d.push(Card {
                 suit: c,
-                value: Value::from(v),
+                value: Value::try_from(v).expect("Known to be in range"),
                 faceup: false,
             })
         }
@@ -509,13 +509,13 @@ mod tests {
             talon: vec![],
             waste: vec![Card {
                 suit: Suit::Hearts,
-                value: 1.into(),
+                value: Value::ACE,
                 faceup: true,
             }],
             columns: [
                 vec![Card {
                     suit: Suit::Spades,
-                    value: 2.into(),
+                    value: Value::TWO,
                     faceup: false,
                 }],
                 vec![],
@@ -528,7 +528,7 @@ mod tests {
             foundations: [vec![], vec![
                 Card {
                     suit: Suit::Spades,
-                    value: 1.into(),
+                    value: Value::ACE,
                     faceup: true,
                 }
             ], vec![], vec![]],
@@ -554,7 +554,7 @@ mod tests {
             talon: vec![],
             waste: vec![Card {
                 suit: Suit::Spades,
-                value: 2.into(),
+                value: Value::TWO,
                 faceup: true,
             }],
             columns: [
